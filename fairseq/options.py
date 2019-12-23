@@ -369,6 +369,9 @@ def add_optimization_args(parser):
     group.add_argument('--use-bmuf', default=False, action='store_true',
                        help='specify global optimizer for syncing models on different GPUs/shards')
     # fmt: on
+    # Codes by Xie
+    group.add_argument('--earlystop-max-update', '--earlymu', default=0, type=int, metavar='N',
+                       help='force stop training when valid_loss less than valid_best_loss in specified update')
     return group
 
 

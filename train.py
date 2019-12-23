@@ -87,7 +87,9 @@ def main(args, init_distributed=False):
     train_meter = StopwatchMeter()
     train_meter.start()
     valid_subsets = args.valid_subset.split(',')
-    while lr > args.min_lr and epoch_itr.epoch < max_epoch and trainer.get_num_updates() < max_update:
+    es_max_update = args.earlystop_max_update or math.inf
+    es_update = 0
+    while lr > args.min_lr and epoch_itr.epoch < max_epoch and trainer.get_num_updates() < max_update and es_update < es_max_update:
         # train for one epoch
         train(args, trainer, task, epoch_itr)
 
@@ -95,7 +97,7 @@ def main(args, init_distributed=False):
             valid_losses = validate(args, trainer, task, epoch_itr, valid_subsets)
         else:
             valid_losses = [None]
-
+        print(valid_losses)
         # only use first validation loss to update the learning rate
         lr = trainer.lr_step(epoch_itr.epoch, valid_losses[0])
 
@@ -146,9 +148,10 @@ def train(args, trainer, task, epoch_itr):
             stats[k] = extra_meters[k].avg
         progress.log(stats, tag='train', step=stats['num_updates'])
 
-        # ignore the first mini-batch in words-per-second calculation
+        # ignore the first mini-batch in words-per-second and updates-per-second calculation
         if i == 0:
             trainer.get_meter('wps').reset()
+            trainer.get_meter('ups').reset()
 
         num_updates = trainer.get_num_updates()
         if (

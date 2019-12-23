@@ -1,5 +1,5 @@
 # !/bin/bash
-model=iwslt17/curr.update1.5k.finetune
+model=iwslt17/curr.update1.5k.finetune30
 CKPT_DIR=/data/wanying/1.research/multilingual/checkpoints/$model
 OUT_DIR=/data/wanying/1.research/multilingual/checkpoints/$model/test
 GPU=6

@@ -1,7 +1,7 @@
 export CUDA_VISIBLE_DEVICES=4,5
 path=curr1
-output=curr.update1.5k.finetune
-cp data-bin/iwslt17/zeroshards/train.* data-bin/iwslt17/$path
+output=codes
+#cp data-bin/iwslt17/zeroshards/train.* data-bin/iwslt17/$path
 declare -a lang=('fr' 'it' 'ro' 'nl' 'de')
 #declare -a update=(
 #    '500' '1000' '1500' '2000' '2500' '3000' '3500' '4000' '4500' '5000' '5500' '6000' '6500' '7000' '15000'
@@ -13,19 +13,18 @@ declare -a lang=('fr' 'it' 'ro' 'nl' 'de')
 #    '6150' '6300' '6450' '6600' '6750' '6900' '7050' '7200' '7350' '15000')
 #for j in $(seq 0 4)
 #do
-for i in $(seq 0 4)
-do
+#for i in $(seq 0 4)
+#do
 #for j in $(seq 0 4)
 #do
 l=${lang[$i]}
 #index=`echo "scale=2;$i*5+$j"|bc`
 #up=`echo "scale=2;$index*300+300"|bc`
 #up=${update[$index]}
-cp data-bin/iwslt17/DeFrItNlRo-En/train.${l}-en.* data-bin/iwslt17/$path
+#cp data-bin/iwslt17/DeFrItNlRo-En/train.${l}-en.* data-bin/iwslt17/$path
 #cp data-bin/iwslt17/shards5.shuffle/$l-$j/train.${l}-en.* data-bin/iwslt17/$path
 python3 train.py data-bin/iwslt17/$path \
     --arch multilingual_transformer \
-    --restore-file ../baseline_base/checkpoint51.pt \
     --max-update 1500 --fp16 --fp16-init-scale 16 \
     --task multilingual_translation --lang-pairs fr-en,it-en,ro-en,nl-en,de-en \
     --share-decoders --share-decoder-input-output-embed \
@@ -37,8 +36,9 @@ python3 train.py data-bin/iwslt17/$path \
     --dropout 0.3 --weight-decay 0.0 \
     --max-tokens 4096  --update-freq 4 \
     --no-progress-bar --log-format json --log-interval 10 \
+    --earlystop-max-update 10 \
     --save-dir checkpoints/iwslt17/$output |tee -a  logs/iwslt17/$output.log
-done
+#done
 #done
 """
 python3 train.py data-bin/iwslt17/$path \
