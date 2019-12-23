@@ -17,7 +17,7 @@ cp data-bin/iwslt17/DeFrItNlRo-En/train.fr-en.* data-bin/iwslt17/$path
 python3 train.py data-bin/iwslt17/$path \
     --arch multilingual_transformer \
     --reset-lr-scheduler --reset-optimizer \
-    --restore-file /data/wanying/1.research/multilingual/checkpoints/iwslt17/baseline_base/checkpoint30.pt \
+    --restore-file /data/wanying/1.research/multilingual/checkpoints/iwslt17/baseline_base/checkpoint10.pt \
     --max-update 1500 --fp16 --fp16-init-scale 16 \
     --task multilingual_translation --lang-pairs fr-en,it-en,ro-en,nl-en,de-en \
     --share-decoders --share-decoder-input-output-embed \

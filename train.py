@@ -20,7 +20,7 @@ from fairseq.trainer import Trainer
 from fairseq.meters import AverageMeter, StopwatchMeter
 
 fb_pathmgr_registerd = False
-
+best_loss_updates = 0
 
 def main(args, init_distributed=False):
     utils.import_user_module(args)
@@ -94,10 +94,14 @@ def main(args, init_distributed=False):
         train(args, trainer, task, epoch_itr)
 
         if not args.disable_validation and epoch_itr.epoch % args.validate_interval == 0:
-            valid_losses = validate(args, trainer, task, epoch_itr, valid_subsets)
+            valid_losses, stats = validate(args, trainer, task, epoch_itr, valid_subsets)
         else:
             valid_losses = [None]
-        print(valid_losses)
+
+        # add the earlystop updates if valid_loss is larger than valid_best_loss
+        if hasattr(checkpoint_utils.save_checkpoint, 'best'):
+            es_update = stats['num_updates'] - stats['best_loss_updates']
+
         # only use first validation loss to update the learning rate
         lr = trainer.lr_step(epoch_itr.epoch, valid_losses[0])
 
@@ -160,7 +164,7 @@ def train(args, trainer, task, epoch_itr):
             and num_updates % args.save_interval_updates == 0
             and num_updates > 0
         ):
-            valid_losses = validate(args, trainer, task, epoch_itr, valid_subsets)
+            valid_losses, _ = validate(args, trainer, task, epoch_itr, valid_subsets)
             checkpoint_utils.save_checkpoint(args, trainer, epoch_itr, valid_losses[0])
 
         if num_updates >= max_update:
@@ -263,7 +267,7 @@ def validate(args, trainer, task, epoch_itr, subsets):
             if args.best_checkpoint_metric == 'loss'
             else stats[args.best_checkpoint_metric]
         )
-    return valid_losses
+    return valid_losses, stats
 
 
 def get_valid_stats(trainer, args, extra_meters=None):
@@ -294,6 +298,11 @@ def get_valid_stats(trainer, args, extra_meters=None):
             checkpoint_utils.save_checkpoint.best,
             current_metric,
         )
+        key2 = 'best_loss_updates'
+        global best_loss_updates
+        if stats[key] == current_metric:
+            best_loss_updates = stats['num_updates']
+        stats[key2] = best_loss_updates
     return stats
 
 

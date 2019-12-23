@@ -1,6 +1,6 @@
-export CUDA_VISIBLE_DEVICES=4,5
+export CUDA_VISIBLE_DEVICES=5,6
 path=curr1
-output=codes
+output=curr.earlystop1000
 #cp data-bin/iwslt17/zeroshards/train.* data-bin/iwslt17/$path
 declare -a lang=('fr' 'it' 'ro' 'nl' 'de')
 #declare -a update=(
@@ -13,19 +13,19 @@ declare -a lang=('fr' 'it' 'ro' 'nl' 'de')
 #    '6150' '6300' '6450' '6600' '6750' '6900' '7050' '7200' '7350' '15000')
 #for j in $(seq 0 4)
 #do
-#for i in $(seq 0 4)
-#do
+for i in $(seq 0 4)
+do
 #for j in $(seq 0 4)
 #do
 l=${lang[$i]}
 #index=`echo "scale=2;$i*5+$j"|bc`
 #up=`echo "scale=2;$index*300+300"|bc`
 #up=${update[$index]}
-#cp data-bin/iwslt17/DeFrItNlRo-En/train.${l}-en.* data-bin/iwslt17/$path
+cp data-bin/iwslt17/DeFrItNlRo-En/train.${l}-en.* data-bin/iwslt17/$path
 #cp data-bin/iwslt17/shards5.shuffle/$l-$j/train.${l}-en.* data-bin/iwslt17/$path
 python3 train.py data-bin/iwslt17/$path \
     --arch multilingual_transformer \
-    --max-update 1500 --fp16 --fp16-init-scale 16 \
+    --fp16 --fp16-init-scale 16 \
     --task multilingual_translation --lang-pairs fr-en,it-en,ro-en,nl-en,de-en \
     --share-decoders --share-decoder-input-output-embed \
     --share-encoders --share-all-embeddings \
@@ -36,9 +36,9 @@ python3 train.py data-bin/iwslt17/$path \
     --dropout 0.3 --weight-decay 0.0 \
     --max-tokens 4096  --update-freq 4 \
     --no-progress-bar --log-format json --log-interval 10 \
-    --earlystop-max-update 10 \
+    --earlystop-max-update 1000 \
     --save-dir checkpoints/iwslt17/$output |tee -a  logs/iwslt17/$output.log
-#done
+done
 #done
 """
 python3 train.py data-bin/iwslt17/$path \
