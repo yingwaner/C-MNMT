@@ -1,6 +1,6 @@
 export CUDA_VISIBLE_DEVICES=4,5
-path=curr1
-output=curr.update1.5k.finetune30
+path=curr
+output=curr.shards5.shuffle.mlen
 cp data-bin/iwslt17/zeroshards/train.* data-bin/iwslt17/$path
 declare -a lang=('fr' 'it' 'ro' 'nl' 'de')
 declare -a update=(
@@ -13,49 +13,51 @@ declare -a update=(
 #    '6150' '6300' '6450' '6600' '6750' '6900' '7050' '7200' '7350' '15000')
 #for j in $(seq 0 4)
 #do
-cp data-bin/iwslt17/DeFrItNlRo-En/train.fr-en.* data-bin/iwslt17/$path
-python3 train.py data-bin/iwslt17/$path \
-    --arch multilingual_transformer \
-    --reset-lr-scheduler --reset-optimizer \
-    --restore-file /data/wanying/1.research/multilingual/checkpoints/iwslt17/baseline_base/checkpoint10.pt \
-    --max-update 1500 --fp16 --fp16-init-scale 16 \
-    --task multilingual_translation --lang-pairs fr-en,it-en,ro-en,nl-en,de-en \
-    --share-decoders --share-decoder-input-output-embed \
-    --share-encoders --share-all-embeddings \
-    --optimizer adam --adam-betas '(0.9, 0.98)' \
-    --lr-scheduler inverse_sqrt --warmup-init-lr 1e-07 --warmup-updates 4000 \
-    --lr 0.0007 --min-lr 1e-09 --ddp-backend=no_c10d \
-    --weight-decay 0.0 --criterion label_smoothed_cross_entropy --label-smoothing 0.1 \
-    --dropout 0.3 --weight-decay 0.0 \
-    --max-tokens 4096  --update-freq 4 \
-    --no-progress-bar --log-format json --log-interval 10 \
-    --save-dir checkpoints/iwslt17/$output |tee -a  logs/iwslt17/$output.log
-for i in $(seq 1 4)
+#cp data-bin/iwslt17/DeFrItNlRo-En/train.fr-en.* data-bin/iwslt17/$path
+#python3 train.py data-bin/iwslt17/$path \
+#    --arch multilingual_transformer \
+#    --reset-lr-scheduler --reset-optimizer \
+#    --restore-file /data/wanying/1.research/multilingual/checkpoints/iwslt17/baseline_base/checkpoint10.pt \
+#    --max-update 1500 --fp16 --fp16-init-scale 16 \
+#    --task multilingual_translation --lang-pairs fr-en,it-en,ro-en,nl-en,de-en \
+#    --share-decoders --share-decoder-input-output-embed \
+#    --share-encoders --share-all-embeddings \
+#    --optimizer adam --adam-betas '(0.9, 0.98)' \
+#    --lr-scheduler inverse_sqrt --warmup-init-lr 1e-07 --warmup-updates 4000 \
+#    --lr 0.0007 --min-lr 1e-09 --ddp-backend=no_c10d \
+#    --weight-decay 0.0 --criterion label_smoothed_cross_entropy --label-smoothing 0.1 \
+#    --dropout 0.3 --weight-decay 0.0 \
+#    --max-tokens 4096  --update-freq 4 \
+#    --no-progress-bar --log-format json --log-interval 10 \
+#    --save-dir checkpoints/iwslt17/$output |tee -a  logs/iwslt17/$output.log
+for i in $(seq 0 4)
 do
-#for j in $(seq 0 4)
-#do
+for j in $(seq 0 4)
+do
 l=${lang[$i]}
 #index=`echo "scale=2;$i*5+$j"|bc`
 #up=`echo "scale=2;$index*300+300"|bc`
 #up=${update[$index]}
-cp data-bin/iwslt17/DeFrItNlRo-En/train.${l}-en.* data-bin/iwslt17/$path
-#cp data-bin/iwslt17/shards5.shuffle/$l-$j/train.${l}-en.* data-bin/iwslt17/$path
+#cp data-bin/iwslt17/DeFrItNlRo-En/train.${l}-en.* data-bin/iwslt17/$path
+cp data-bin/iwslt17/shards5.shuffle/$l-$j/train.${l}-en.* data-bin/iwslt17/$path
 python3 train.py data-bin/iwslt17/$path \
     --arch multilingual_transformer \
-    --max-update ${update[$i]} --fp16 --fp16-init-scale 16 \
+    --fp16 --fp16-init-scale 16 \
     --task multilingual_translation --lang-pairs fr-en,it-en,ro-en,nl-en,de-en \
     --share-decoders --share-decoder-input-output-embed \
     --share-encoders --share-all-embeddings \
+    --reset-lr-scheduler --reset-optimizer \
     --optimizer adam --adam-betas '(0.9, 0.98)' \
     --lr-scheduler inverse_sqrt --warmup-init-lr 1e-07 --warmup-updates 4000 \
     --lr 0.0007 --min-lr 1e-09 --ddp-backend=no_c10d \
     --weight-decay 0.0 --criterion label_smoothed_cross_entropy --label-smoothing 0.1 \
     --dropout 0.3 --weight-decay 0.0 \
     --max-tokens 4096  --update-freq 4 \
+    --earlystop-max-update 500 \
     --no-progress-bar --log-format json --log-interval 10 \
     --save-dir checkpoints/iwslt17/$output |tee -a  logs/iwslt17/$output.log
 done
-#done
+done
 """
 python3 train.py data-bin/iwslt17/$path \
     --arch multilingual_transformer \

@@ -1,7 +1,7 @@
-export CUDA_VISIBLE_DEVICES=5,6
+export CUDA_VISIBLE_DEVICES=6,7
 path=curr1
-output=curr.earlystop1000
-#cp data-bin/iwslt17/zeroshards/train.* data-bin/iwslt17/$path
+output=curr.earlystop500.reset
+cp data-bin/iwslt17/zeroshards/train.* data-bin/iwslt17/$path
 declare -a lang=('fr' 'it' 'ro' 'nl' 'de')
 #declare -a update=(
 #    '500' '1000' '1500' '2000' '2500' '3000' '3500' '4000' '4500' '5000' '5500' '6000' '6500' '7000' '15000'
@@ -26,6 +26,7 @@ cp data-bin/iwslt17/DeFrItNlRo-En/train.${l}-en.* data-bin/iwslt17/$path
 python3 train.py data-bin/iwslt17/$path \
     --arch multilingual_transformer \
     --fp16 --fp16-init-scale 16 \
+    --reset-lr-scheduler --reset-optimizer \
     --task multilingual_translation --lang-pairs fr-en,it-en,ro-en,nl-en,de-en \
     --share-decoders --share-decoder-input-output-embed \
     --share-encoders --share-all-embeddings \
@@ -36,24 +37,24 @@ python3 train.py data-bin/iwslt17/$path \
     --dropout 0.3 --weight-decay 0.0 \
     --max-tokens 4096  --update-freq 4 \
     --no-progress-bar --log-format json --log-interval 10 \
-    --earlystop-max-update 1000 \
+    --earlystop-max-update 500 \
     --save-dir checkpoints/iwslt17/$output |tee -a  logs/iwslt17/$output.log
 done
 #done
-"""
+
 python3 train.py data-bin/iwslt17/$path \
     --arch multilingual_transformer \
-    --max-update 7500 --fp16 --fp16-init-scale 16 \
+    --max-update 15000 --fp16 --fp16-init-scale 16 \
     --task multilingual_translation --lang-pairs fr-en,it-en,ro-en,nl-en,de-en \
     --share-decoders --share-decoder-input-output-embed \
-    --share-encoders --share-all-embeddings \
     --reset-lr-scheduler --reset-optimizer \
+    --share-encoders --share-all-embeddings \
     --optimizer adam --adam-betas '(0.9, 0.98)' \
     --lr-scheduler inverse_sqrt --warmup-init-lr 1e-07 --warmup-updates 4000 \
-    --lr 0.000175 --min-lr 1e-09 --ddp-backend=no_c10d \
+    --lr 0.0007 --min-lr 1e-09 --ddp-backend=no_c10d \
     --weight-decay 0.0 --criterion label_smoothed_cross_entropy --label-smoothing 0.1 \
     --dropout 0.3 --weight-decay 0.0 \
     --max-tokens 4096  --update-freq 4 \
     --no-progress-bar --log-format json --log-interval 10 \
     --save-dir checkpoints/iwslt17/$output |tee -a  logs/iwslt17/$output.log
-"""
+
