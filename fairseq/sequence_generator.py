@@ -98,7 +98,7 @@ class SequenceGenerator(object):
             self.search = search.BeamSearch(tgt_dict)
 
     @torch.no_grad()
-    def generate(self, models, sample, **kwargs):
+    def generate(self, models, sample, lang_num, **kwargs):
         """Generate a batch of translations.
 
         Args:
@@ -110,13 +110,14 @@ class SequenceGenerator(object):
                 (default: self.eos)
         """
         model = EnsembleModel(models)
-        return self._generate(model, sample, **kwargs)
+        return self._generate(model, sample, lang_num, **kwargs)
 
     @torch.no_grad()
     def _generate(
         self,
         model,
         sample,
+        lang_num,
         prefix_tokens=None,
         bos_token=None,
         **kwargs
@@ -149,7 +150,7 @@ class SequenceGenerator(object):
             )
 
         # compute the encoder output for each beam
-        encoder_outs = model.forward_encoder(encoder_input)
+        encoder_outs = model.forward_encoder(lang_num, encoder_input)
         new_order = torch.arange(bsz).view(-1, 1).repeat(1, beam_size).view(-1)
         new_order = new_order.to(src_tokens.device).long()
         encoder_outs = model.reorder_encoder_out(encoder_outs, new_order)
@@ -534,10 +535,10 @@ class EnsembleModel(torch.nn.Module):
         return min(m.max_decoder_positions() for m in self.models)
 
     @torch.no_grad()
-    def forward_encoder(self, encoder_input):
+    def forward_encoder(self, lang_num, encoder_input):
         if not self.has_encoder():
             return None
-        return [model.encoder(**encoder_input) for model in self.models]
+        return [model.encoder(lang_num, **encoder_input) for model in self.models]
 
     @torch.no_grad()
     def forward_decoder(self, tokens, encoder_outs, temperature=1.):
@@ -578,11 +579,11 @@ class EnsembleModel(torch.nn.Module):
         temperature=1.,
     ):
         if self.incremental_states is not None:
-            decoder_out = list(model.forward_decoder(
+            decoder_out = list(model.decoder(
                 tokens, encoder_out=encoder_out, incremental_state=self.incremental_states[model],
             ))
         else:
-            decoder_out = list(model.forward_decoder(tokens, encoder_out=encoder_out))
+            decoder_out = list(model.decoder(tokens, encoder_out=encoder_out))
         decoder_out[0] = decoder_out[0][:, -1:, :]
         if temperature != 1.:
             decoder_out[0].div_(temperature)

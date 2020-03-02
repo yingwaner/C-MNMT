@@ -270,7 +270,7 @@ class TransformerEncoder(FairseqEncoder):
         embed_tokens (torch.nn.Embedding): input embedding
     """
 
-    def __init__(self, args, dictionary, embed_tokens):
+    def __init__(self, args, dictionary, embed_tokens, num_languages: int = 5):
         super().__init__(dictionary)
         self.register_buffer('version', torch.Tensor([3]))
 
@@ -300,15 +300,23 @@ class TransformerEncoder(FairseqEncoder):
         else:
             self.layer_norm = None
 
-    def forward_embedding(self, src_tokens):
+        #language embedding for different languages
+        self.num_languages = num_languages
+        #self.language_embeddings = (
+        #nn.Embedding(self.num_languages, embed_dim, self.padding_idx)
+        #)
+
+    def forward_embedding(self, src_tokens, lang):
         # embed tokens and positions
         embed = self.embed_scale * self.embed_tokens(src_tokens)
         if self.embed_positions is not None:
             x = embed + self.embed_positions(src_tokens)
+        #if self.language_embeddings is not None and lang is not None:
+        #    x = x + self.language_embeddings(lang.long().cuda())
         x = F.dropout(x, p=self.dropout, training=self.training)
         return x, embed
 
-    def forward(self, src_tokens, src_lengths, cls_input=None, return_all_hiddens=False):
+    def forward(self, lang_pair, src_tokens, src_lengths, cls_input=None, return_all_hiddens=False):
         """
         Args:
             src_tokens (LongTensor): tokens in the source language of shape
@@ -331,7 +339,9 @@ class TransformerEncoder(FairseqEncoder):
         if self.layer_wise_attention:
             return_all_hiddens = True
 
-        x, encoder_embedding = self.forward_embedding(src_tokens)
+        lang = torch.Tensor([lang_pair])
+
+        x, encoder_embedding = self.forward_embedding(src_tokens, lang)
 
         # B x T x C -> T x B x C
         x = x.transpose(0, 1)

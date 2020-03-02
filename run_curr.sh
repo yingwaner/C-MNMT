@@ -1,7 +1,7 @@
-export CUDA_VISIBLE_DEVICES=4
+export CUDA_VISIBLE_DEVICES=4,5,6,7
 python3 train.py data-bin/iwslt17/DeFrItNlRo-En \
     --arch multilingual_transformer_iwslt_de_en \
-    --max-epoch 10 --fp16 --fp16-init-scale 16 \
+    --fp16 --fp16-init-scale 16 \
     --task multilingual_translation --lang-pairs fr-en,it-en \
     --share-decoders --share-decoder-input-output-embed \
     --share-encoders --share-all-embeddings \
@@ -11,5 +11,5 @@ python3 train.py data-bin/iwslt17/DeFrItNlRo-En \
     --weight-decay 0.0 --criterion label_smoothed_cross_entropy --label-smoothing 0.1 \
     --dropout 0.3 --weight-decay 0.0001 \
     --max-tokens 4096  --update-freq 2 \
-    --no-progress-bar --log-format json --log-interval 20 \
-    --save-dir checkpoints/iwslt17/tst |tee -a  logs/iwslt17/tst.log
+    --no-progress-bar --log-format json --log-interval 50 \
+    --save-dir checkpoints/iwslt17/tst1 |tee -a  logs/iwslt17/tst1.log

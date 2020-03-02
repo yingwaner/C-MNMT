@@ -7,7 +7,7 @@ declare -a lang=('fr' 'it' 'ro' 'nl' 'de')
 for j in $(seq 0 4)
 do
 l=${lang[$j]}
-for i in $(seq 3 4)
+for i in $(seq 0 4)
 do
 python3 preprocess.py --joined-dictionary \
         --source-lang ${l} --target-lang en \

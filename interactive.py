@@ -15,6 +15,9 @@ import torch
 from fairseq import checkpoint_utils, options, tasks, utils
 from fairseq.data import encoders
 
+import sys
+import codecs
+sys.stdout = codecs.getwriter("utf-8")(sys.stdout.detach())
 
 Batch = namedtuple('Batch', 'ids src_tokens src_lengths')
 Translation = namedtuple('Translation', 'src_str hypos pos_scores alignments')

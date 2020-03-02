@@ -92,6 +92,8 @@ class MultilingualTranslationTask(FairseqTask):
         parser.add_argument('--decoder-langtok', action='store_true',
                             help='replace beginning-of-sentence in target sentence with target language token')
         # fmt: on
+        parser.add_argument('--focus-lang', default=None, 
+                            help='the focus language in training which will be trained twice')
 
     def __init__(self, args, dicts, training):
         super().__init__(args)
@@ -113,6 +115,7 @@ class MultilingualTranslationTask(FairseqTask):
         # build models other than the input lang_pairs
         self.model_lang_pairs = self.lang_pairs
         self.langs = list(dicts.keys())
+        self.focus_lang = args.focus_lang
 
     @classmethod
     def setup_task(cls, args, **kwargs):
@@ -272,10 +275,10 @@ class MultilingualTranslationTask(FairseqTask):
     def train_step(self, sample, model, criterion, optimizer, ignore_grad=False):
         model.train()
         agg_loss, agg_sample_size, agg_logging_output = 0., 0., {}
-        for lang_pair in self.model_lang_pairs:
+        for num, lang_pair in enumerate(self.model_lang_pairs):
             if sample[lang_pair] is None or len(sample[lang_pair]) == 0:
                 continue
-            loss, sample_size, logging_output = criterion(model.models[lang_pair], sample[lang_pair])
+            loss, sample_size, logging_output = criterion(model.models[lang_pair], sample[lang_pair], num)
             if ignore_grad:
                 loss *= 0
             optimizer.backward(loss)
@@ -289,10 +292,10 @@ class MultilingualTranslationTask(FairseqTask):
         model.eval()
         with torch.no_grad():
             agg_loss, agg_sample_size, agg_logging_output = 0., 0., {}
-            for lang_pair in self.eval_lang_pairs:
+            for num, lang_pair in enumerate(self.eval_lang_pairs):
                 if lang_pair not in sample or sample[lang_pair] is None or len(sample[lang_pair]) == 0:
                     continue
-                loss, sample_size, logging_output = criterion(model.models[lang_pair], sample[lang_pair])
+                loss, sample_size, logging_output = criterion(model.models[lang_pair], sample[lang_pair], num)
                 agg_loss += loss.data.item()
                 # TODO make summing of the sample sizes configurable
                 agg_sample_size += sample_size
@@ -301,9 +304,11 @@ class MultilingualTranslationTask(FairseqTask):
 
     def inference_step(self, generator, models, sample, prefix_tokens=None):
         with torch.no_grad():
+            num = self.args.lang_pairs.index(self.lang_pairs[0])
             return generator.generate(
                     models,
                     sample,
+                    num,
                     prefix_tokens=prefix_tokens,
                     bos_token=_lang_token_index(self.target_dictionary, self.args.target_lang)
                     if self.args.decoder_langtok else self.target_dictionary.eos(),
