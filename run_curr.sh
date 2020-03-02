@@ -10,6 +10,6 @@ python3 train.py data-bin/iwslt17/DeFrItNlRo-En \
     --lr 0.0005 --min-lr 1e-09 --ddp-backend=no_c10d \
     --weight-decay 0.0 --criterion label_smoothed_cross_entropy --label-smoothing 0.1 \
     --dropout 0.3 --weight-decay 0.0001 \
-    --max-tokens 4096  --update-freq 2 \
-    --no-progress-bar --log-format json --log-interval 50 \
+    --max-tokens 4096  --update-freq 2 --focus-lang fr-en \
+    --no-progress-bar --log-format json --log-interval 5 \
     --save-dir checkpoints/iwslt17/tst1 |tee -a  logs/iwslt17/tst1.log
