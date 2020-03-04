@@ -1,11 +1,11 @@
 export CUDA_VISIBLE_DEVICES=4,5,6,7
 path=curr
-#output=curr.earlystop500.reset-05.random1
-output=lowresource.curr+label_fortest
-assign=zhihuan
+output=curr.shards10.earlystop50.reset-05
+#output=lowresource.curr.numfocus.fortest
+assign=iwslt17
 
-cp data-bin/zhihuan/zero/train.* data-bin/zhihuan/$path
-declare -a lang=('fr' 'ro' 'de' 'ja' 'zh')
+cp data-bin/$assign/zero/train.* data-bin/$assign/$path
+declare -a lang=('fr' 'it' 'ro' 'nl' 'de')
 #declare -a update=(
 #    '500' '1000' '1500' '2000' '2500' '3000' '3500' '4000' '4500' '5000' '5500' '6000' '6500' '7000' '15000'
 #    )
@@ -18,18 +18,18 @@ declare -a lang=('fr' 'ro' 'de' 'ja' 'zh')
 #do
 for i in $(seq 0 4)
 do
-#for j in $(seq 0 4)
-#do
+for j in $(seq 0 9)
+do
 l=${lang[$i]}
 #index=`echo "scale=2;$i*5+$j"|bc`
 #up=`echo "scale=2;$index*300+300"|bc`
 #up=${update[$index]}
-cp data-bin/$assign/baseline/train.${l}-en.* data-bin/$assign/$path
-#cp data-bin/iwslt17/shards5.shuffle/$l-$j/train.${l}-en.* data-bin/iwslt17/$path
+#cp data-bin/$assign/baseline/train.${l}-en.* data-bin/$assign/$path
+cp data-bin/iwslt17/shards10.shuffle_noEN/$l-$j/train.${l}-en.* data-bin/iwslt17/$path
 python3 train.py data-bin/$assign/$path \
     --arch multilingual_transformer \
-    --fp16 \
-    --task multilingual_translation --lang-pairs fr-en,ro-en,de-en,ja-en,zh-en \
+    --fp16 --focus-lang ${l}-en \
+    --task multilingual_translation --lang-pairs fr-en,it-en,ro-en,nl-en,de-en \
     --share-decoders --share-decoder-input-output-embed \
     --share-encoders --share-all-embeddings \
     --optimizer adam --adam-betas '(0.9, 0.98)' \
@@ -37,12 +37,12 @@ python3 train.py data-bin/$assign/$path \
     --lr 0.0007 --min-lr 1e-09 --ddp-backend=no_c10d \
     --weight-decay 0.0 --criterion label_smoothed_cross_entropy --label-smoothing 0.1 \
     --dropout 0.3 --clip-norm 0.0 \
-    --max-tokens 2048  --update-freq 2 \
+    --max-tokens 4096  --update-freq 2 \
     --no-progress-bar --log-format json --log-interval 20 \
-    --earlystop-max-update 500 \
+    --earlystop-max-update 50 \
     --save-dir checkpoints/$assign/$output |tee -a  logs/$assign/$output.log
 done
-#done
+done
 
 python3 train.py data-bin/$assign/$path \
     --arch multilingual_transformer \

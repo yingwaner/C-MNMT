@@ -287,14 +287,17 @@ class MultilingualTranslationTask(FairseqTask):
             agg_sample_size += sample_size
             agg_logging_output[lang_pair] = logging_output
             #train twice focus_lang 
+            """
             if self.focus_lang == lang_pair:
-                loss, sample_size, logging_output = criterion(model.models[lang_pair], sample[lang_pair], num)
-                if ignore_grad:
-                    loss *= 0
-                optimizer.backward(loss)
-                agg_loss += loss.detach().item()
-                agg_sample_size += sample_size
-                agg_logging_output[lang_pair] = logging_output
+                for i in range(num):
+                    loss, sample_size, logging_output = criterion(model.models[lang_pair], sample[lang_pair], num)
+                    if ignore_grad:
+                        loss *= 0
+                    optimizer.backward(loss)
+                    agg_loss += loss.detach().item()
+                    agg_sample_size += sample_size
+                    agg_logging_output[lang_pair] = logging_output
+            """
         return agg_loss, agg_sample_size, agg_logging_output
 
     def valid_step(self, sample, model, criterion):
