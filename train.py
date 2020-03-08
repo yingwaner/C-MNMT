@@ -88,11 +88,18 @@ def main(args, init_distributed=False):
     train_meter.start()
     valid_subsets = args.valid_subset.split(',')
     es_max_update = args.earlystop_max_update or math.inf
-    es_update = 0
-    while lr > args.min_lr and epoch_itr.epoch < max_epoch and trainer.get_num_updates() < max_update and es_update < es_max_update:
+    process_threshold = args.process_threshold or math.inf
+    es_update = 0.
+    processed = 0.
+    flag = 0
+    while lr > args.min_lr and epoch_itr.epoch < max_epoch and trainer.get_num_updates() < max_update and es_update < es_max_update and processed < process_threshold:
         # train for one epoch
-        train(args, trainer, task, epoch_itr)
-
+        process, total = train(args, trainer, task, epoch_itr)
+        processed = process / total
+        print("Now the processed is ", process, "/", total,"=", processed)
+        if flag == 0:
+            processed = 0
+        flag = flag + 1
         if not args.disable_validation and epoch_itr.epoch % args.validate_interval == 0:
             valid_losses, stats = validate(args, trainer, task, epoch_itr, valid_subsets)
         else:
@@ -135,8 +142,11 @@ def train(args, trainer, task, epoch_itr):
     extra_meters = collections.defaultdict(lambda: AverageMeter())
     valid_subsets = args.valid_subset.split(',')
     max_update = args.max_update or math.inf
+    process_num, total_num = 0, 0
     for i, samples in enumerate(progress, start=epoch_itr.iterations_in_epoch):
-        log_output = trainer.train_step(samples)
+        log_output, process, total = trainer.train_step(samples)
+        process_num = process_num + process
+        total_num = total_num + total
         if log_output is None:
             continue
 
@@ -183,6 +193,7 @@ def train(args, trainer, task, epoch_itr):
         meter = trainer.get_meter(k)
         if meter is not None:
             meter.reset()
+    return process_num , total_num
 
 
 def get_training_stats(trainer):

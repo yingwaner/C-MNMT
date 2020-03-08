@@ -273,6 +273,7 @@ class Trainer(object):
 
         # forward and backward pass
         logging_outputs, sample_sizes, ooms = [], [], 0
+        process_num, total_num = 0, 0
         for i, sample in enumerate(samples):
             sample = self._prepare_sample(sample)
             if sample is None:
@@ -301,10 +302,12 @@ class Trainer(object):
             try:
                 with maybe_no_sync():
                     # forward and backward
-                    loss, sample_size, logging_output = self.task.train_step(
+                    loss, sample_size, logging_output, process, total = self.task.train_step(
                         sample, self.model, self.criterion, self.optimizer,
                         ignore_grad
                     )
+                    process_num = process_num + process
+                    total_num = total_num + total
 
                 if not ignore_grad:
                     logging_outputs.append(logging_output)
@@ -463,7 +466,7 @@ class Trainer(object):
         self.clear_buffered_stats()
         self.meters['train_wall'].stop()
 
-        return logging_output
+        return logging_output, process_num, total_num
 
     def valid_step(self, sample, raise_oom=False):
         """Do forward pass in evaluation mode."""
