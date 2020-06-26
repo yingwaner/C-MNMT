@@ -11,7 +11,7 @@ from collections import namedtuple
 import fileinput
 
 import torch
-
+import numpy as np
 from fairseq import checkpoint_utils, options, tasks, utils
 from fairseq.data import encoders
 
@@ -136,6 +136,7 @@ def main(args):
     start_id = 0
     for inputs in buffered_read(args.input, args.buffer_size):
         results = []
+        flag = 0
         for batch in make_batches(inputs, args, task, max_positions, encode_fn):
             src_tokens = batch.src_tokens
             src_lengths = batch.src_lengths
@@ -149,10 +150,19 @@ def main(args):
                     'src_lengths': src_lengths,
                 },
             }
-            translations = task.inference_step(generator, models, sample)
+            translations, sent = task.inference_step(generator, models, sample)
+            """
+            sent = np.mean(sent, axis=1)
+            if flag == 0:
+                sent_hidden = sent
+                flag = flag + 1
+            else:
+                sent_hidden = np.append(sent_hidden, sent, axis=0)
+            """
             for i, (id, hypos) in enumerate(zip(batch.ids.tolist(), translations)):
                 src_tokens_i = utils.strip_pad(src_tokens[i], tgt_dict.pad())
                 results.append((start_id + id, src_tokens_i, hypos))
+        #np.save('%s_sent' %(args.source_lang), sent_hidden)
 
         # sort output to match input order
         for id, src_tokens, hypos in sorted(results, key=lambda x: x[0]):

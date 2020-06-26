@@ -151,6 +151,9 @@ class SequenceGenerator(object):
 
         # compute the encoder output for each beam
         encoder_outs = model.forward_encoder(lang_num, encoder_input)
+        sents = encoder_outs[0]['encoder_out']
+        sents = sents.transpose(0, 1)#T x B x C -> B x T x C
+        sents = sents.cpu().numpy()
         new_order = torch.arange(bsz).view(-1, 1).repeat(1, beam_size).view(-1)
         new_order = new_order.to(src_tokens.device).long()
         encoder_outs = model.reorder_encoder_out(encoder_outs, new_order)
@@ -515,7 +518,7 @@ class SequenceGenerator(object):
         # sort by score descending
         for sent in range(len(finalized)):
             finalized[sent] = sorted(finalized[sent], key=lambda r: r['score'], reverse=True)
-        return finalized
+        return finalized, sents
 
 
 class EnsembleModel(torch.nn.Module):

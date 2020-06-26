@@ -21,6 +21,8 @@ from fairseq.meters import AverageMeter, StopwatchMeter
 
 fb_pathmgr_registerd = False
 best_loss_updates = 0
+best_valid_loss = 9999
+beat_updates = 0
 
 def main(args, init_distributed=False):
     utils.import_user_module(args)
@@ -88,18 +90,22 @@ def main(args, init_distributed=False):
     train_meter.start()
     valid_subsets = args.valid_subset.split(',')
     es_max_update = args.earlystop_max_update or math.inf
-    process_threshold = args.process_threshold or math.inf
+    #process_threshold = args.process_threshold or math.inf
     es_update = 0.
     processed = 0.
-    flag = 0
-    while lr > args.min_lr and epoch_itr.epoch < max_epoch and trainer.get_num_updates() < max_update and es_update < es_max_update and processed < process_threshold:
+    flag, stage = 0, 0
+    global best_valid_loss, best_updates
+    while lr > args.min_lr and epoch_itr.epoch < max_epoch and trainer.get_num_updates() < max_update and es_update < es_max_update and stage < 3:
         # train for one epoch
-        process, total = train(args, trainer, task, epoch_itr)
-        processed = process / total
+        process, total = train(args, trainer, task, epoch_itr, stage)
+        processed = process / 1 #total
         print("Now the processed is ", process, "/", total,"=", processed)
         if flag == 0:
             processed = 0
         flag = flag + 1
+        #if processed < process_threshold:
+        #    stage = stage + 1
+
         if not args.disable_validation and epoch_itr.epoch % args.validate_interval == 0:
             valid_losses, stats = validate(args, trainer, task, epoch_itr, valid_subsets)
         else:
@@ -108,6 +114,12 @@ def main(args, init_distributed=False):
         # add the earlystop updates if valid_loss is larger than valid_best_loss
         if hasattr(checkpoint_utils.save_checkpoint, 'best'):
             es_update = stats['num_updates'] - stats['best_loss_updates']
+        #print(es_update)
+        #if valid_losses[0] < best_valid_loss:
+        #    best_valid_loss = valid_losses[0]
+        #    best_updates = stats['num_updates']
+        #else:
+        #    es_update = stats['num_updates'] - best_updates
 
         # only use first validation loss to update the learning rate
         lr = trainer.lr_step(epoch_itr.epoch, valid_losses[0])
@@ -123,7 +135,7 @@ def main(args, init_distributed=False):
     print('| done training in {:.1f} seconds'.format(train_meter.sum))
 
 
-def train(args, trainer, task, epoch_itr):
+def train(args, trainer, task, epoch_itr, stage):
     """Train the model for one epoch."""
     # Update parameters every N batches
     update_freq = args.update_freq[epoch_itr.epoch - 1] \
@@ -144,7 +156,7 @@ def train(args, trainer, task, epoch_itr):
     max_update = args.max_update or math.inf
     process_num, total_num = 0, 0
     for i, samples in enumerate(progress, start=epoch_itr.iterations_in_epoch):
-        log_output, process, total = trainer.train_step(samples)
+        log_output, process, total = trainer.train_step(samples, stage)
         process_num = process_num + process
         total_num = total_num + total
         if log_output is None:

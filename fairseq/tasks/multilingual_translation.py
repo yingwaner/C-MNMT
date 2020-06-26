@@ -97,7 +97,7 @@ class MultilingualTranslationTask(FairseqTask):
                             help='the focus language in training which will be trained twice')
         parser.add_argument('--process-threshold', type=float,  default=None,
                             help='contral the process threshold')
-        parser.add_argument('--loss-threshold', type=int,  default=math.inf,
+        parser.add_argument('--loss-threshold', nargs='+', type=int,
                             help='contral the loss threshold')
 
     def __init__(self, args, dicts, training):
@@ -279,14 +279,14 @@ class MultilingualTranslationTask(FairseqTask):
             raise ValueError('MultilingualTranslationTask requires a FairseqMultiModel architecture')
         return model
 
-    def train_step(self, sample, model, criterion, optimizer, ignore_grad=False):
+    def train_step(self, sample, model, criterion, optimizer, stage, ignore_grad=False):
         model.train()
         agg_loss, agg_sample_size, agg_logging_output = 0., 0., {}
         process_num, total_num = 0, 0
         for num, lang_pair in enumerate(self.model_lang_pairs):
             if sample[lang_pair] is None or len(sample[lang_pair]) == 0:
                 continue
-            loss, sample_size, logging_output, process, total = criterion(model.models[lang_pair], sample[lang_pair], num, self.loss_threshold)
+            loss, sample_size, logging_output, process, total = criterion(model.models[lang_pair], sample[lang_pair], num, 9999)#self.loss_threshold[stage])
             if ignore_grad:
                 loss *= 0
             optimizer.backward(loss)
@@ -296,11 +296,22 @@ class MultilingualTranslationTask(FairseqTask):
             agg_logging_output[lang_pair] = logging_output
 
             #comoute process sentences
-            process_num = process_num + process
-            total_num = total_num + total
-            #train twice focus_lang 
             if self.focus_lang == lang_pair:
+                process_num = process_num + process
+                total_num = total_num + total
+
+                loss, sample_size, logging_output, process, total = criterion(model.models[lang_pair], sample[lang_pair], num, 9999)
+                if ignore_grad:
+                    loss *= 0
+                optimizer.backward(loss)
+                agg_loss += loss.detach().item()
+                agg_sample_size += sample_size
+                agg_logging_output[lang_pair] = logging_output
+                
                 break
+            #train twice focus_lang 
+            #if self.focus_lang == lang_pair:
+            #    break
             """
             if self.focus_lang == lang_pair:
                 for i in range(num):
@@ -321,7 +332,7 @@ class MultilingualTranslationTask(FairseqTask):
             for num, lang_pair in enumerate(self.eval_lang_pairs):
                 if lang_pair not in sample or sample[lang_pair] is None or len(sample[lang_pair]) == 0:
                     continue
-                loss, sample_size, logging_output, process_num, total_num = criterion(model.models[lang_pair], sample[lang_pair], num, self.loss_threshold)
+                loss, sample_size, logging_output, process_num, total_num = criterion(model.models[lang_pair], sample[lang_pair], num, 9999)
                 agg_loss += loss.data.item()
                 # TODO make summing of the sample sizes configurable
                 agg_sample_size += sample_size
