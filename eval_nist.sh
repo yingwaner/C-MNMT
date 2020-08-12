@@ -1,19 +1,23 @@
 # !/bin/bash
-#model=iwslt17/curr.earlystop500.reset-05.random
-model=zhihuan/curr+label
+#model=iwslt17/curr.threshold0.7.lossthreshold120-60.focuslang
+#model=iwslt17/curr.cosdis.shardsreverse.shards321.validloss300.focustwice
+#model=iwslt17/competence.cdf.shards10
+model=iwslt17/again_baseline
+#model=zhihuan/competence.zhihuan.shards10.shuffle.up1.2k.reset
+#model=zhihuan/lowresource.cosdis.curr.fdzrj.shards33.focustwice.up300
 CKPT_DIR=/data/wanying/1.research/multilingual/checkpoints/$model
 OUT_DIR=/data/wanying/1.research/multilingual/checkpoints/$model/test
 GPU=4
 
 mkdir -p $OUT_DIR
 
-declare -a testset=('fr' 'ro' 'de' 'ja' 'zh')
+declare -a testset=('fr' 'it' 'ro' 'nl' 'de')
 declare -a refset=(
        '/data/wanying/2.data/multilingual/DeEnItNlRo-DeEnItNlRo/preprocessed/tst.fr-en.en.tok'
+       '/data/wanying/2.data/multilingual/DeEnItNlRo-DeEnItNlRo/preprocessed/tst.it-en.en.tok'
        '/data/wanying/2.data/multilingual/DeEnItNlRo-DeEnItNlRo/preprocessed/tst.ro-en.en.tok'
+       '/data/wanying/2.data/multilingual/DeEnItNlRo-DeEnItNlRo/preprocessed/tst.nl-en.en.tok'
        '/data/wanying/2.data/multilingual/DeEnItNlRo-DeEnItNlRo/preprocessed/tst.de-en.en.tok'
-       '/data/wanying/2.data/multilingual/DeEnItNlRo-DeEnItNlRo/preprocessed/tst.ja-en.en.tok'
-       '/data/wanying/2.data/multilingual/DeEnItNlRo-DeEnItNlRo/preprocessed/tst.zh-en.en.tok'
 		)
 valid_ref='/data/wanying/pretrain/pure/mt02_u8.en.low'
 v='valid'
@@ -21,9 +25,9 @@ len=${#testset[@]}
 max=`echo $len-1|bc`
 script='/data/wanying/pretrain/eval/multi-bleu.perl'
 BEAM=5
-ALPHA=0.6
-BATCH=250
-DATABIN=/data/wanying/1.research/multilingual/data-bin/zhihuan/baseline
+ALPHA=1.4
+BATCH=100
+DATABIN=/data/wanying/1.research/multilingual/data-bin/iwslt17/curr
 
 #for m in $CKPT_DIR/checkpoint9.pt; do
 #for m in $CKPT_DIR/*.pt; do
@@ -40,14 +44,14 @@ m=$CKPT_DIR/checkpoint$1.pt
 #    bleu=`perl $script  $valid_ref < $OUT_DIR/${m_name}.$t.out`
 #    echo -e "\t$v\t$bleu"
 
-    for i in $(seq 0 $max); do
+    for i in $(seq 2 $max); do
         t=${testset[$i]}
         r=${refset[$i]}
-        cat /data/wanying/2.data/multilingual/DeEnItNlRo-DeEnItNlRo/preprocessed/fastBPE/iwslt17/tst.40k.$t-en.$t \
+        cat /data/wanying/2.data/multilingual/DeEnItNlRo-DeEnItNlRo/preprocessed/fastBPE/iwslt17_ori/tst.32k.$t-en.$t \
         | CUDA_VISIBLE_DEVICES=$GPU python3 interactive.py $DATABIN --path $m \
         --task multilingual_translation --source-lang $t --target-lang en \
-        --buffer-size 2000 --lang-pairs fr-en,ro-en,de-en,ja-en,zh-en \
-        --beam $BEAM --batch-size $BATCH --remove-bpe \
+        --buffer-size 2000 --lang-pairs fr-en,it-en,ro-en,nl-en,de-en \
+        --beam $BEAM --lenpen $ALPHA --batch-size $BATCH --remove-bpe \
         --log-format=none > $OUT_DIR/${m_name}.$t
         #grep ^H $OUT_DIR/${m_name}.$t | cut -f1,3- | cut -c3- | sort -k1n | cut -f2- > $OUT_DIR/${m_name}.$t.out
 	python3 choose-translation.py  $OUT_DIR/${m_name}.$t  $OUT_DIR/${m_name}.$t.out

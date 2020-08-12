@@ -22,11 +22,11 @@ def label_smoothed_nll_loss(lprobs, target, epsilon, batchsize, timestep, loss_t
     nll_loss_tmp = nll_loss_tmp.mul(non_pad_mask.float()).sum(1)
     target_tmp = target.clone().view(batchsize, timestep)
     process_num = 0
-    for i in range(batchsize):
-        if nll_loss_tmp[i] > loss_threshold:
-            target_tmp[i] = ignore_index
-            continue
-        process_num = process_num + 1
+    #for i in range(batchsize):
+    #    if nll_loss_tmp[i] > loss_threshold:
+    #        target_tmp[i] = ignore_index
+    #        continue
+    #    process_num = process_num + 1
     target_tmp = target_tmp.view(-1, 1)
 
     if ignore_index is not None:
